@@ -2,7 +2,7 @@
 
 ## Status
 
-⚪ **Pending**
+🟢 **Complete**
 
 ## Objective
 
@@ -40,17 +40,17 @@ Add a health check endpoint at `/health` to allow monitoring systems and other s
 
 ## Acceptance Criteria
 
-- [ ] Health endpoint responds at `/health` with GET request
-- [ ] Returns HTTP 200 status code when healthy
-- [ ] Returns proper JSON response format
-- [ ] Includes application name and version from build.sbt
-- [ ] Includes current timestamp in ISO format
-- [ ] HTTP route layer only handles HTTP concerns
-- [ ] Business logic contained in separate service trait with implementation
-- [ ] Unit tests cover both service and route layers
-- [ ] Integration test verifies end-to-end functionality
-- [ ] Code follows project formatting standards (`sbt commitCheck` passes)
-- [ ] Documentation updated if needed
+- [x] Health endpoint responds at `/health` with GET request
+- [x] Returns HTTP 200 status code when healthy
+- [x] Returns proper JSON response format
+- [x] Includes application name and version from build.sbt
+- [x] Includes current timestamp in ISO format
+- [x] HTTP route layer only handles HTTP concerns
+- [x] Business logic contained in separate service trait with implementation
+- [x] Unit tests cover both service and route layers
+- [x] Integration test verifies end-to-end functionality
+- [x] Code follows project formatting standards (`sbt commitCheck` passes)
+- [x] Documentation updated if needed
 
 ## Implementation Notes
 

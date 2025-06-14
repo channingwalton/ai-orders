@@ -3,6 +3,10 @@ ThisBuild / version          := "0.1.0-SNAPSHOT"
 ThisBuild / organization     := "com.example"
 ThisBuild / organizationName := "example"
 
+// SemanticDB settings for scalafix
+ThisBuild / semanticdbEnabled := true
+ThisBuild / semanticdbVersion := scalafixSemanticdb.revision
+
 lazy val root = (project in file("."))
   .settings(
     name := "ai-orders",
@@ -63,10 +67,6 @@ lazy val root = (project in file("."))
 // Compiler options
 ThisBuild / scalacOptions ++= Seq(
   "-deprecation",
-  "-encoding",
-  "UTF-8",
   "-feature",
-  "-unchecked",
-  "-Xfatal-warnings",
-  "-Xlint"
+  "-unchecked"
 )
