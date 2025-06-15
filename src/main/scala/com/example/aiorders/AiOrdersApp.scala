@@ -1,10 +1,11 @@
 package com.example.aiorders
 
 import cats.effect.{IO, Resource}
+import cats.syntax.all._
 import com.example.aiorders.config.AppConfig
 import com.example.aiorders.models.ApplicationInfo
-import com.example.aiorders.routes.HealthRoutes
-import com.example.aiorders.services.HealthService
+import com.example.aiorders.routes.{HealthRoutes, OrderRoutes}
+import com.example.aiorders.services.{HealthService, OrderService}
 import org.http4s.HttpApp
 import org.http4s.ember.server.EmberServerBuilder
 import org.http4s.server.Server
@@ -21,9 +22,13 @@ object AiOrdersApp {
     val healthService = HealthService[IO](appInfo)
     val healthRoutes  = HealthRoutes[IO](healthService)
 
-    val httpApp: HttpApp[IO] = healthRoutes.orNotFound
-
     for {
+      orderService <- Resource.eval(OrderService.inMemory[IO])
+      orderRoutes = OrderRoutes[IO](orderService)
+
+      allRoutes            = healthRoutes <+> orderRoutes.routes
+      httpApp: HttpApp[IO] = allRoutes.orNotFound
+
       _ <- Resource.eval(
         logger.info(s"Starting server on ${config.server.host}:${config.server.port}")
       )
