@@ -5,7 +5,9 @@
       "Bash(git commit:*)",
       "Bash(git push:*)",
       "WebFetch(domain:docs.anthropic.com)",
-      "Bash(timeout 10s sbt run)"
+      "Bash(timeout 10s sbt run)",
+      "Bash(timeout 30s sbt \"testOnly *UserRepositorySpec\")",
+      "Bash(timeout 60s sbt \"testOnly *UserRepositorySpec\")"
     ],
     "deny": []
   }
