@@ -3,12 +3,7 @@ ThisBuild / version          := "0.1.0-SNAPSHOT"
 ThisBuild / organization     := "com.example"
 ThisBuild / organizationName := "example"
 
-// CI flag - set to true in CI environments, false for local development
-val isCI = sys.env.get("CI").contains("true")
-
-// Auto-format and scalafix settings
-ThisBuild / scalafmtOnCompile := !isCI
-ThisBuild / scalafixOnCompile := !isCI
+// SemanticDB settings for scalafix
 ThisBuild / semanticdbEnabled := true
 ThisBuild / semanticdbVersion := scalafixSemanticdb.revision
 

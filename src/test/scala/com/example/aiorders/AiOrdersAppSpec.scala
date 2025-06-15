@@ -2,7 +2,7 @@ package com.example.aiorders
 
 import cats.effect.IO
 import com.comcast.ip4s.{host, port}
-import com.example.aiorders.config.{AppConfig, ApplicationConfig, DatabaseConfig, ServerConfig}
+import com.example.aiorders.config.{AppConfig, ApplicationConfig, ServerConfig}
 import munit.CatsEffectSuite
 
 class AiOrdersAppSpec extends CatsEffectSuite {
@@ -19,14 +19,7 @@ class AiOrdersAppSpec extends CatsEffectSuite {
   test("server resource can be created") {
     val config = AppConfig(
       server = ServerConfig(host"127.0.0.1", port"8081"),
-      application = ApplicationConfig("test-app", "1.0.0"),
-      database = DatabaseConfig(
-        driver = "org.postgresql.Driver",
-        url = "jdbc:postgresql://localhost:5432/test",
-        user = "test",
-        password = "test",
-        maxPoolSize = 5
-      )
+      application = ApplicationConfig("test-app", "1.0.0")
     )
 
     AiOrdersApp.server(config).use { server =>

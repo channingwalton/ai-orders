@@ -2,7 +2,7 @@
 
 ## Status
 
-🟢 **Complete**
+⚪ **Pending**
 
 ## Objective
 
@@ -128,22 +128,22 @@ Response:
 
 ## Acceptance Criteria
 
-- [x] Database schema created with proper migrations
-- [x] User, Product, and Order domain models implemented
-- [x] Order creation service with business logic validation
-- [x] User order retrieval service
-- [x] Database repository layer using Doobie
-- [x] POST /api/orders endpoint for order creation
-- [x] GET /api/users/{userId}/orders endpoint for order retrieval
-- [x] Proper JSON serialization/deserialization for all models
-- [x] Input validation and error handling
-- [x] Database configuration integrated with application.conf
+- [ ] Database schema created with proper migrations
+- [ ] User, Product, and Order domain models implemented
+- [ ] Order creation service with business logic validation
+- [ ] User order retrieval service
+- [ ] Database repository layer using Doobie
+- [ ] POST /api/orders endpoint for order creation
+- [ ] GET /api/users/{userId}/orders endpoint for order retrieval
+- [ ] Proper JSON serialization/deserialization for all models
+- [ ] Input validation and error handling
+- [ ] Database configuration integrated with application.conf
 - [ ] Comprehensive unit tests for all components
 - [ ] Integration tests with PostgreSQL testcontainers
 - [ ] Route tests for all HTTP endpoints
 - [ ] End-to-end workflow tests
-- [x] Code follows project formatting standards (sbt commitCheck passes)
-- [x] API endpoints work correctly when application is running
+- [ ] Code follows project formatting standards (sbt commitCheck passes)
+- [ ] API endpoints work correctly when application is running
 - [ ] Documentation updated with new endpoints
 
 ## Implementation Notes

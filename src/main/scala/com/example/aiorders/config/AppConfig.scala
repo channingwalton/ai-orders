@@ -14,18 +14,9 @@ final case class ApplicationConfig(
   version: String
 )
 
-final case class DatabaseConfig(
-  driver: String,
-  url: String,
-  user: String,
-  password: String,
-  maxPoolSize: Int
-)
-
 final case class AppConfig(
   server: ServerConfig,
-  application: ApplicationConfig,
-  database: DatabaseConfig
+  application: ApplicationConfig
 ) derives ConfigReader
 
 object AppConfig {
