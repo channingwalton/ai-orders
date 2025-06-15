@@ -1,6 +1,6 @@
 package com.example.aiorders.services
 
-import cats.effect.MonadCancelThrow
+import cats.MonadError
 import cats.syntax.all._
 import com.example.aiorders.models.{CreateOrderRequest, Order, OrderId, ServiceError, UserId}
 import com.example.aiorders.store.OrderStore
@@ -8,21 +8,21 @@ import com.example.aiorders.utils.TimeUtils
 
 import java.util.UUID
 
-trait OrderService[F[_]] {
-  def createOrder(request: CreateOrderRequest): F[Order]
-  def getOrdersForUser(userId: UserId): F[List[Order]]
+trait OrderService[G[_]] {
+  def createOrder(request: CreateOrderRequest): G[Order]
+  def getOrdersForUser(userId: UserId): G[List[Order]]
 }
 
 class DatabaseOrderService[F[_], G[_]](
   store: OrderStore[F, G],
-  userService: UserService[F]
-)(implicit F: MonadCancelThrow[F])
-    extends OrderService[F] {
+  userService: UserService[G]
+)(implicit G: MonadError[G, Throwable])
+    extends OrderService[G] {
 
-  def createOrder(request: CreateOrderRequest): F[Order] =
+  def createOrder(request: CreateOrderRequest): G[Order] =
     for {
       userExists <- userService.userExists(request.userId)
-      _ <- if (userExists) F.unit else F.raiseError(ServiceError.UserNotFound(request.userId))
+      _ <- if (userExists) G.unit else G.raiseError(ServiceError.UserNotFound(request.userId))
       order = Order(
         id = OrderId(UUID.randomUUID()),
         userId = request.userId,
@@ -31,21 +31,21 @@ class DatabaseOrderService[F[_], G[_]](
         totalAmount = request.totalAmount,
         createdAt = TimeUtils.nowWithSecondPrecision
       )
-      _ <- store.commit(store.create(order))
+      _ <- store.create(order)
     } yield order
 
-  def getOrdersForUser(userId: UserId): F[List[Order]] =
+  def getOrdersForUser(userId: UserId): G[List[Order]] =
     for {
       userExists <- userService.userExists(userId)
-      _          <- if (userExists) F.unit else F.raiseError(ServiceError.UserNotFound(userId))
-      orders     <- store.commit(store.findByUserId(userId))
+      _          <- if (userExists) G.unit else G.raiseError(ServiceError.UserNotFound(userId))
+      orders     <- store.findByUserId(userId)
     } yield orders
 }
 
 object OrderService {
-  def withStore[F[_]: MonadCancelThrow, G[_]](
+  def withStore[F[_], G[_]](
     store: OrderStore[F, G],
-    userService: UserService[F]
-  ): OrderService[F] =
+    userService: UserService[G]
+  )(implicit G: MonadError[G, Throwable]): OrderService[G] =
     new DatabaseOrderService[F, G](store, userService)
 }

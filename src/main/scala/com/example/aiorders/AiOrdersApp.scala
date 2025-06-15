@@ -41,7 +41,7 @@ object AiOrdersApp {
         )
         userService  = UserService.withStore(store)
         orderService = OrderService.withStore(store, userService)
-        orderRoutes  = OrderRoutes[IO](orderService)
+        orderRoutes  = OrderRoutes[IO, doobie.ConnectionIO](orderService, store)
 
         allRoutes            = healthRoutes <+> orderRoutes.routes
         httpApp: HttpApp[IO] = allRoutes.orNotFound

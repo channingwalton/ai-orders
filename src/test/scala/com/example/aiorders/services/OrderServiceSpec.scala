@@ -18,17 +18,25 @@ class OrderServiceSpec extends CatsEffectSuite {
     totalAmount = BigDecimal("29.99")
   )
 
-  private def setupServices: IO[(UserService[IO], OrderService[IO], UserId)] =
+  private def setupServices: IO[
+    (
+      UserService[TestHelpers.TestEither],
+      OrderService[TestHelpers.TestEither],
+      com.example.aiorders.store.OrderStore[IO, TestHelpers.TestEither],
+      UserId
+    )
+  ] =
     for {
-      userService  <- TestHelpers.createInMemoryUserService
-      orderService <- TestHelpers.createInMemoryOrderService(userService)
-      user         <- userService.createUser("test@example.com", "Test User")
-    } yield (userService, orderService, user.id)
+      store <- TestHelpers.createInMemoryStore
+      userService  = TestHelpers.createInMemoryUserService(store)
+      orderService = TestHelpers.createInMemoryOrderService(store, userService)
+      user <- store.commit(userService.createUser("test@example.com", "Test User"))
+    } yield (userService, orderService, store, user.id)
 
   test("createOrder creates a new order with correct details for existing user") {
-    setupServices.flatMap { case (_, orderService, validUserId) =>
+    setupServices.flatMap { case (_, orderService, store, validUserId) =>
       val request = testRequest.copy(userId = validUserId)
-      orderService.createOrder(request).map { order =>
+      store.commit(orderService.createOrder(request)).map { order =>
         assertEquals(order.userId, validUserId)
         assertEquals(order.productId, testProductId)
         assertEquals(order.quantity, 2)
@@ -40,9 +48,9 @@ class OrderServiceSpec extends CatsEffectSuite {
   }
 
   test("createOrder fails for non-existent user") {
-    setupServices.flatMap { case (_, orderService, _) =>
-      orderService.createOrder(testRequest).attempt.map {
-        case Left(ServiceError.UserNotFound(userId)) => assertEquals(userId, testUserId)
+    setupServices.flatMap { case (_, orderService, store, _) =>
+      store.commit(orderService.createOrder(testRequest)).attempt.map {
+        case Left(error: ServiceError.UserNotFound) => assertEquals(error.userId, testUserId)
         case Left(other) => fail(s"Expected UserNotFound error, got: $other")
         case Right(_)    => fail("Expected error for non-existent user")
       }
@@ -50,17 +58,17 @@ class OrderServiceSpec extends CatsEffectSuite {
   }
 
   test("getOrdersForUser returns empty list when no orders exist for existing user") {
-    setupServices.flatMap { case (_, orderService, validUserId) =>
-      orderService.getOrdersForUser(validUserId).map { orders =>
+    setupServices.flatMap { case (_, orderService, store, validUserId) =>
+      store.commit(orderService.getOrdersForUser(validUserId)).map { orders =>
         assertEquals(orders, List.empty)
       }
     }
   }
 
   test("getOrdersForUser fails for non-existent user") {
-    setupServices.flatMap { case (_, orderService, _) =>
-      orderService.getOrdersForUser(testUserId).attempt.map {
-        case Left(ServiceError.UserNotFound(userId)) => assertEquals(userId, testUserId)
+    setupServices.flatMap { case (_, orderService, store, _) =>
+      store.commit(orderService.getOrdersForUser(testUserId)).attempt.map {
+        case Left(error: ServiceError.UserNotFound) => assertEquals(error.userId, testUserId)
         case Left(other) => fail(s"Expected UserNotFound error, got: $other")
         case Right(_)    => fail("Expected error for non-existent user")
       }
@@ -68,19 +76,19 @@ class OrderServiceSpec extends CatsEffectSuite {
   }
 
   test("getOrdersForUser returns orders for specific user") {
-    setupServices.flatMap { case (userService, orderService, user1Id) =>
+    setupServices.flatMap { case (userService, orderService, store, user1Id) =>
       for {
-        user2 <- userService.createUser("user2@example.com", "User 2")
+        user2 <- store.commit(userService.createUser("user2@example.com", "User 2"))
 
         request1 = testRequest.copy(userId = user1Id)
         request2 = testRequest.copy(userId = user2.id)
 
-        order1 <- orderService.createOrder(request1)
-        order2 <- orderService.createOrder(request2)
-        order3 <- orderService.createOrder(request1)
+        order1 <- store.commit(orderService.createOrder(request1))
+        order2 <- store.commit(orderService.createOrder(request2))
+        order3 <- store.commit(orderService.createOrder(request1))
 
-        user1Orders <- orderService.getOrdersForUser(user1Id)
-        user2Orders <- orderService.getOrdersForUser(user2.id)
+        user1Orders <- store.commit(orderService.getOrdersForUser(user1Id))
+        user2Orders <- store.commit(orderService.getOrdersForUser(user2.id))
       } yield {
         assertEquals(user1Orders.length, 2)
         assertEquals(user2Orders.length, 1)
@@ -92,16 +100,16 @@ class OrderServiceSpec extends CatsEffectSuite {
   }
 
   test("getOrdersForUser returns orders sorted by creation time (newest first)") {
-    setupServices.flatMap { case (_, orderService, validUserId) =>
+    setupServices.flatMap { case (_, orderService, store, validUserId) =>
       val request = testRequest.copy(userId = validUserId)
       for {
-        order1 <- orderService.createOrder(request)
+        order1 <- store.commit(orderService.createOrder(request))
         _      <- IO.sleep(scala.concurrent.duration.Duration.fromNanos(1000))
-        order2 <- orderService.createOrder(request)
+        order2 <- store.commit(orderService.createOrder(request))
         _      <- IO.sleep(scala.concurrent.duration.Duration.fromNanos(1000))
-        order3 <- orderService.createOrder(request)
+        order3 <- store.commit(orderService.createOrder(request))
 
-        orders <- orderService.getOrdersForUser(validUserId)
+        orders <- store.commit(orderService.getOrdersForUser(validUserId))
       } yield {
         assertEquals(orders.length, 3)
         assertEquals(orders.head, order3)

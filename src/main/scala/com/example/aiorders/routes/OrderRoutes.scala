@@ -4,13 +4,17 @@ import cats.effect.Concurrent
 import cats.syntax.all._
 import com.example.aiorders.models.{CreateOrderRequest, OrderListResponse, ServiceError, UserId}
 import com.example.aiorders.services.OrderService
+import com.example.aiorders.store.OrderStore
 import io.circe.syntax._
 import io.circe.{DecodingFailure, Json}
 import org.http4s.circe._
 import org.http4s.dsl.Http4sDsl
 import org.http4s.{EntityDecoder, EntityEncoder, HttpRoutes, MalformedMessageBodyFailure, Response}
 
-class OrderRoutes[F[_]: Concurrent](orderService: OrderService[F]) extends Http4sDsl[F] {
+class OrderRoutes[F[_]: Concurrent, G[_]](
+  orderService: OrderService[G],
+  store: OrderStore[F, G]
+) extends Http4sDsl[F] {
 
   implicit val createOrderRequestDecoder: EntityDecoder[F, CreateOrderRequest] =
     jsonOf[F, CreateOrderRequest]
@@ -22,14 +26,14 @@ class OrderRoutes[F[_]: Concurrent](orderService: OrderService[F]) extends Http4
     case req @ POST -> Root / "orders" =>
       (for {
         createRequest <- req.as[CreateOrderRequest]
-        order         <- orderService.createOrder(createRequest)
+        order         <- store.commit(orderService.createOrder(createRequest))
         response      <- Created(order)
       } yield response).handleErrorWith(handleError)
 
     case GET -> Root / "orders" / "user" / UUIDVar(userUuid) =>
       val userId = UserId(userUuid)
       (for {
-        orders   <- orderService.getOrdersForUser(userId)
+        orders   <- store.commit(orderService.getOrdersForUser(userId))
         response <- Ok(OrderListResponse(orders))
       } yield response).handleErrorWith(handleError)
   }
@@ -51,6 +55,9 @@ class OrderRoutes[F[_]: Concurrent](orderService: OrderService[F]) extends Http4
 }
 
 object OrderRoutes {
-  def apply[F[_]: Concurrent](orderService: OrderService[F]): OrderRoutes[F] =
-    new OrderRoutes[F](orderService)
+  def apply[F[_]: Concurrent, G[_]](
+    orderService: OrderService[G],
+    store: OrderStore[F, G]
+  ): OrderRoutes[F, G] =
+    new OrderRoutes[F, G](orderService, store)
 }

@@ -29,11 +29,12 @@ class OrderRoutesSpec extends CatsEffectSuite {
 
   test("POST /orders creates a new order") {
     for {
-      userService  <- TestHelpers.createInMemoryUserService
-      user         <- userService.createUser("test@example.com", "Test User")
-      orderService <- TestHelpers.createInMemoryOrderService(userService)
+      store <- TestHelpers.createInMemoryStore
+      userService = TestHelpers.createInMemoryUserService(store)
+      user <- store.commit(userService.createUser("test@example.com", "Test User"))
+      orderService = TestHelpers.createInMemoryOrderService(store, userService)
 
-      routes       = OrderRoutes[IO](orderService).routes
+      routes       = OrderRoutes[IO, TestHelpers.TestEither](orderService, store).routes
       validRequest = testRequest.copy(userId = user.id)
       request = Request[IO](Method.POST, uri"/orders")
         .withEntity(validRequest.asJson)
@@ -51,11 +52,12 @@ class OrderRoutesSpec extends CatsEffectSuite {
 
   test("GET /orders/user/{userId} returns empty list when no orders exist") {
     for {
-      userService  <- TestHelpers.createInMemoryUserService
-      user         <- userService.createUser("test@example.com", "Test User")
-      orderService <- TestHelpers.createInMemoryOrderService(userService)
+      store <- TestHelpers.createInMemoryStore
+      userService = TestHelpers.createInMemoryUserService(store)
+      user <- store.commit(userService.createUser("test@example.com", "Test User"))
+      orderService = TestHelpers.createInMemoryOrderService(store, userService)
 
-      routes  = OrderRoutes[IO](orderService).routes
+      routes  = OrderRoutes[IO, TestHelpers.TestEither](orderService, store).routes
       request = Request[IO](Method.GET, Uri.unsafeFromString(s"/orders/user/${user.id.value}"))
 
       response <- routes.orNotFound(request)
@@ -66,16 +68,17 @@ class OrderRoutesSpec extends CatsEffectSuite {
 
   test("GET /orders/user/{userId} returns orders for user") {
     for {
-      userService  <- TestHelpers.createInMemoryUserService
-      user         <- userService.createUser("test@example.com", "Test User")
-      orderService <- TestHelpers.createInMemoryOrderService(userService)
+      store <- TestHelpers.createInMemoryStore
+      userService = TestHelpers.createInMemoryUserService(store)
+      user <- store.commit(userService.createUser("test@example.com", "Test User"))
+      orderService = TestHelpers.createInMemoryOrderService(store, userService)
 
-      routes        = OrderRoutes[IO](orderService).routes
+      routes        = OrderRoutes[IO, TestHelpers.TestEither](orderService, store).routes
       validRequest1 = testRequest.copy(userId = user.id)
       validRequest2 = testRequest.copy(userId = user.id, quantity = 3)
 
-      _ <- orderService.createOrder(validRequest1)
-      _ <- orderService.createOrder(validRequest2)
+      _ <- store.commit(orderService.createOrder(validRequest1))
+      _ <- store.commit(orderService.createOrder(validRequest2))
 
       request = Request[IO](Method.GET, Uri.unsafeFromString(s"/orders/user/${user.id.value}"))
       response <- routes.orNotFound(request)
@@ -90,10 +93,11 @@ class OrderRoutesSpec extends CatsEffectSuite {
 
   test("GET /orders/user/{userId} with invalid UUID returns 404") {
     for {
-      userService  <- TestHelpers.createInMemoryUserService
-      orderService <- TestHelpers.createInMemoryOrderService(userService)
+      store <- TestHelpers.createInMemoryStore
+      userService  = TestHelpers.createInMemoryUserService(store)
+      orderService = TestHelpers.createInMemoryOrderService(store, userService)
 
-      routes  = OrderRoutes[IO](orderService).routes
+      routes  = OrderRoutes[IO, TestHelpers.TestEither](orderService, store).routes
       request = Request[IO](Method.GET, uri"/orders/user/invalid-uuid")
 
       response <- routes.orNotFound(request)

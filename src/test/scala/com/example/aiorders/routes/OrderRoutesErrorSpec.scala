@@ -26,16 +26,24 @@ class OrderRoutesErrorSpec extends CatsEffectSuite {
     totalAmount = BigDecimal("29.99")
   )
 
-  private def setupServices: IO[(UserService[IO], OrderService[IO], UserId)] =
+  private def setupServices: IO[
+    (
+      UserService[TestHelpers.TestEither],
+      OrderService[TestHelpers.TestEither],
+      com.example.aiorders.store.OrderStore[IO, TestHelpers.TestEither],
+      UserId
+    )
+  ] =
     for {
-      userService  <- TestHelpers.createInMemoryUserService
-      orderService <- TestHelpers.createInMemoryOrderService(userService)
-      user         <- userService.createUser("test@example.com", "Test User")
-    } yield (userService, orderService, user.id)
+      store <- TestHelpers.createInMemoryStore
+      userService  = TestHelpers.createInMemoryUserService(store)
+      orderService = TestHelpers.createInMemoryOrderService(store, userService)
+      user <- store.commit(userService.createUser("test@example.com", "Test User"))
+    } yield (userService, orderService, store, user.id)
 
   test("POST /orders returns 404 NotFound for non-existent user") {
-    setupServices.flatMap { case (_, orderService, _) =>
-      val routes = OrderRoutes[IO](orderService).routes
+    setupServices.flatMap { case (_, orderService, store, _) =>
+      val routes = OrderRoutes[IO, TestHelpers.TestEither](orderService, store).routes
       val request = Request[IO](Method.POST, uri"/orders")
         .withEntity(testRequest.asJson)
 
@@ -49,8 +57,8 @@ class OrderRoutesErrorSpec extends CatsEffectSuite {
   }
 
   test("GET /orders/user/{userId} returns 404 NotFound for non-existent user") {
-    setupServices.flatMap { case (_, orderService, _) =>
-      val routes = OrderRoutes[IO](orderService).routes
+    setupServices.flatMap { case (_, orderService, store, _) =>
+      val routes = OrderRoutes[IO, TestHelpers.TestEither](orderService, store).routes
       val request =
         Request[IO](Method.GET, Uri.unsafeFromString(s"/orders/user/${testUserId.value}"))
 
@@ -64,8 +72,8 @@ class OrderRoutesErrorSpec extends CatsEffectSuite {
   }
 
   test("POST /orders returns 400 BadRequest for invalid JSON") {
-    setupServices.flatMap { case (_, orderService, _) =>
-      val routes = OrderRoutes[IO](orderService).routes
+    setupServices.flatMap { case (_, orderService, store, _) =>
+      val routes = OrderRoutes[IO, TestHelpers.TestEither](orderService, store).routes
       val request = Request[IO](Method.POST, uri"/orders")
         .withEntity("invalid json")
 
@@ -79,8 +87,8 @@ class OrderRoutesErrorSpec extends CatsEffectSuite {
   }
 
   test("POST /orders returns 400 BadRequest for missing required fields") {
-    setupServices.flatMap { case (_, orderService, _) =>
-      val routes = OrderRoutes[IO](orderService).routes
+    setupServices.flatMap { case (_, orderService, store, _) =>
+      val routes = OrderRoutes[IO, TestHelpers.TestEither](orderService, store).routes
       val incompleteJson = Json.obj(
         "userId"   -> testUserId.value.toString.asJson,
         "quantity" -> 2.asJson
@@ -103,8 +111,8 @@ class OrderRoutesErrorSpec extends CatsEffectSuite {
   }
 
   test("GET /orders/user/{userId} with malformed UUID returns 404") {
-    setupServices.flatMap { case (_, orderService, _) =>
-      val routes  = OrderRoutes[IO](orderService).routes
+    setupServices.flatMap { case (_, orderService, store, _) =>
+      val routes  = OrderRoutes[IO, TestHelpers.TestEither](orderService, store).routes
       val request = Request[IO](Method.GET, uri"/orders/user/not-a-uuid")
 
       routes.orNotFound(request).map { response =>
