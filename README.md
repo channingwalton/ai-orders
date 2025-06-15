@@ -61,6 +61,63 @@ Returns the application health status with current timestamp and version informa
 }
 ```
 
+### Order Management
+
+**POST** `/orders`
+
+Creates a new order for an existing user.
+
+**Request Body:**
+```json
+{
+  "userId": "123e4567-e89b-12d3-a456-426614174000",
+  "productId": "laptop-pro",
+  "quantity": 2,
+  "totalAmount": 2999.98
+}
+```
+
+**Response (201 Created):**
+```json
+{
+  "id": "987fcdeb-51a2-43d1-9f4b-123456789abc",
+  "userId": "123e4567-e89b-12d3-a456-426614174000",
+  "productId": "laptop-pro",
+  "quantity": 2,
+  "totalAmount": 2999.98,
+  "createdAt": "2025-06-15T11:30:45.123Z"
+}
+```
+
+**Error Responses:**
+- `404 Not Found` - User does not exist
+- `400 Bad Request` - Invalid JSON request format
+- `500 Internal Server Error` - Server processing error
+
+**GET** `/orders/user/{userId}`
+
+Retrieves all orders for a specific user, sorted by creation time (newest first).
+
+**Response (200 OK):**
+```json
+{
+  "orders": [
+    {
+      "id": "987fcdeb-51a2-43d1-9f4b-123456789abc",
+      "userId": "123e4567-e89b-12d3-a456-426614174000",
+      "productId": "laptop-pro",
+      "quantity": 2,
+      "totalAmount": 2999.98,
+      "createdAt": "2025-06-15T11:30:45.123Z"
+    }
+  ]
+}
+```
+
+**Error Responses:**
+- `404 Not Found` - User does not exist or invalid UUID format
+- `500 Internal Server Error` - Server processing error
+
 ## 🧪 Development
 
 ### Running Tests
@@ -71,6 +128,12 @@ sbt test
 
 # Run specific test suite
 sbt "testOnly com.example.aiorders.routes.HealthRoutesSpec"
+
+# Run order management tests
+sbt "testOnly com.example.aiorders.routes.OrderRoutesSpec"
+sbt "testOnly com.example.aiorders.routes.OrderRoutesErrorSpec"
+sbt "testOnly com.example.aiorders.services.OrderServiceSpec"
+sbt "testOnly com.example.aiorders.services.UserServiceSpec"
 ```
 
 ### Code Quality
@@ -121,8 +184,15 @@ ai-orders/
 
 - **Routes**: Handle HTTP requests/responses, delegate to services
 - **Services**: Business logic, defined as traits with implementations
-- **Models**: Domain objects with JSON codecs
+- **Models**: Domain objects with JSON codecs (Order, User, ServiceError)
 - **Config**: Configuration management with PureConfig
+
+### Domain Models
+
+- **Order**: Core business entity representing a customer order
+- **User**: User entity for validation and management
+- **ServiceError**: Sealed trait for structured error handling
+- **OrderId, UserId, ProductId**: Strongly-typed identifiers
 
 ## ⚙️ Configuration
 
