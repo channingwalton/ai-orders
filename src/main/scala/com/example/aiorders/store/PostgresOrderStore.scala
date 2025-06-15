@@ -3,7 +3,7 @@ package com.example.aiorders.store
 import cats.arrow.FunctionK
 import cats.effect.{Async, Resource}
 import cats.syntax.all._
-import com.example.aiorders.models.{Order, OrderId, ServiceError, UserId}
+import com.example.aiorders.models.{Order, OrderId, ServiceError, User, UserId}
 import doobie.ConnectionIO
 import doobie.hikari.HikariTransactor
 import doobie.implicits._
@@ -56,6 +56,48 @@ class PostgresOrderStore[F[_]: StructuredLogger: Async](
     OrderStatements.exists(orderId).unique.attempt.flatMap {
       case Right(v) => v.pure[ConnectionIO]
       case Left(e)  => databaseError(s"Error checking if order exists: $orderId", e.some)
+    }
+
+  // User operations
+  override def createUser(user: User): ConnectionIO[Unit] =
+    OrderStatements.createUser(user).run.attempt.flatMap {
+      case Right(1) => cioUnit
+      case Right(n) => databaseError[Unit](s"Expected 1 row inserted but got $n instead")
+      case Left(e)  => databaseError("Error creating user", e.some)
+    }
+
+  override def findUserById(userId: UserId): ConnectionIO[Option[User]] =
+    OrderStatements.findUserById(userId).option.attempt.flatMap {
+      case Right(o) => o.pure[ConnectionIO]
+      case Left(e)  => databaseError("Error finding user by ID", e.some)
+    }
+
+  override def findUserByEmail(email: String): ConnectionIO[Option[User]] =
+    OrderStatements.findUserByEmail(email).option.attempt.flatMap {
+      case Right(o) => o.pure[ConnectionIO]
+      case Left(e)  => databaseError("Error finding user by email", e.some)
+    }
+
+  override def updateUser(user: User): ConnectionIO[Unit] =
+    OrderStatements.updateUser(user).run.attempt.flatMap {
+      case Right(1) => cioUnit
+      case Right(0) => ServiceError.UserNotFound(user.id).raiseError[ConnectionIO, Unit]
+      case Right(n) => databaseError[Unit](s"Expected 1 row updated but got $n instead")
+      case Left(e)  => databaseError("Error updating user", e.some)
+    }
+
+  override def deleteUser(userId: UserId): ConnectionIO[Unit] =
+    OrderStatements.deleteUser(userId).run.attempt.flatMap {
+      case Right(1) => cioUnit
+      case Right(0) => ServiceError.UserNotFound(userId).raiseError[ConnectionIO, Unit]
+      case Right(n) => databaseError[Unit](s"Expected 1 row deleted but got $n instead")
+      case Left(e)  => databaseError("Error deleting user", e.some)
+    }
+
+  override def userExists(userId: UserId): ConnectionIO[Boolean] =
+    OrderStatements.userExists(userId).unique.attempt.flatMap {
+      case Right(v) => v.pure[ConnectionIO]
+      case Left(e)  => databaseError(s"Error checking if user exists: $userId", e.some)
     }
 
   override def commit[A](f: ConnectionIO[A]): F[A] =

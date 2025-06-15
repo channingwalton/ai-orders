@@ -7,7 +7,7 @@ import com.dimafeng.testcontainers.PostgreSQLContainer
 import com.dimafeng.testcontainers.munit.TestContainerForAll
 import com.example.aiorders.config.{AppConfig, ApplicationConfig, DatabaseConfig, ServerConfig}
 import com.example.aiorders.db.DatabaseMigration
-import com.example.aiorders.store.{OrderStore, PostgresOrderStore, PostgresUserStore, UserStore}
+import com.example.aiorders.store.{OrderStore, PostgresOrderStore}
 import doobie.hikari.HikariTransactor
 import doobie.util.transactor.Transactor
 import munit.CatsEffectSuite
@@ -49,19 +49,14 @@ abstract class DatabaseSpec extends CatsEffectSuite with TestContainerForAll {
         doobie.free.connection.delay(fa.unsafeRunSync())
     }
 
-  def userStoreResource: Resource[IO, UserStore[IO, ConnectionIO]] =
-    transactorResource.map { transactor =>
-      new PostgresUserStore[IO](transactor, createLift)
-    }
-
-  def orderStoreResource: Resource[IO, OrderStore[IO, ConnectionIO]] =
+  def storeResource: Resource[IO, OrderStore[IO, ConnectionIO]] =
     transactorResource.map { transactor =>
       new PostgresOrderStore[IO](transactor, createLift)
     }
 
-  implicit class UserStoreOps[A](cio: ConnectionIO[A]) {
-    def commit(implicit store: UserStore[IO, ConnectionIO]): IO[A] = store.commit(cio)
-  }
+  // For backward compatibility
+  def userStoreResource: Resource[IO, OrderStore[IO, ConnectionIO]]  = storeResource
+  def orderStoreResource: Resource[IO, OrderStore[IO, ConnectionIO]] = storeResource
 
   import doobie._
   import doobie.implicits._

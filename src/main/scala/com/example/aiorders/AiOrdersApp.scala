@@ -7,7 +7,7 @@ import com.example.aiorders.db.DatabaseMigration
 import com.example.aiorders.models.ApplicationInfo
 import com.example.aiorders.routes.{HealthRoutes, OrderRoutes}
 import com.example.aiorders.services.{HealthService, OrderService, UserService}
-import com.example.aiorders.store.{PostgresOrderStore, PostgresUserStore}
+import com.example.aiorders.store.PostgresOrderStore
 import org.http4s.HttpApp
 import org.http4s.ember.server.EmberServerBuilder
 import org.http4s.server.Server
@@ -41,10 +41,9 @@ object AiOrdersApp {
           config.database.password,
           ce
         )
-        userStore    = new PostgresUserStore[IO](transactor, lift)
-        orderStore   = new PostgresOrderStore[IO](transactor, lift)
-        userService  = UserService.withStore(userStore)
-        orderService = OrderService.withStore(orderStore, userService)
+        store        = new PostgresOrderStore[IO](transactor, lift)
+        userService  = UserService.withStore(store)
+        orderService = OrderService.withStore(store, userService)
         orderRoutes  = OrderRoutes[IO](orderService)
 
         allRoutes            = healthRoutes <+> orderRoutes.routes

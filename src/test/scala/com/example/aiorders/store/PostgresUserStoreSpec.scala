@@ -19,8 +19,8 @@ class PostgresUserStoreSpec extends DatabaseSpec {
       )
 
       for {
-        _     <- store.create(user).commit
-        found <- store.findById(user.id).commit
+        _     <- store.commit(store.createUser(user))
+        found <- store.commit(store.findUserById(user.id))
       } yield assertEquals(found, Some(user))
     }
   }
@@ -35,8 +35,8 @@ class PostgresUserStoreSpec extends DatabaseSpec {
       )
 
       for {
-        _     <- store.create(user).commit
-        found <- store.findByEmail(user.email).commit
+        _     <- store.commit(store.createUser(user))
+        found <- store.commit(store.findUserByEmail(user.email))
       } yield assertEquals(found, Some(user))
     }
   }
@@ -51,9 +51,9 @@ class PostgresUserStoreSpec extends DatabaseSpec {
       )
 
       for {
-        existsBefore <- store.exists(user.id).commit
-        _            <- store.create(user).commit
-        existsAfter  <- store.exists(user.id).commit
+        existsBefore <- store.commit(store.userExists(user.id))
+        _            <- store.commit(store.createUser(user))
+        existsAfter  <- store.commit(store.userExists(user.id))
       } yield {
         assertEquals(existsBefore, false)
         assertEquals(existsAfter, true)
@@ -73,9 +73,9 @@ class PostgresUserStoreSpec extends DatabaseSpec {
       val updatedUser = user.copy(name = "Updated Name", email = "updated@example.com")
 
       for {
-        _     <- store.create(user).commit
-        _     <- store.update(updatedUser).commit
-        found <- store.findById(user.id).commit
+        _     <- store.commit(store.createUser(user))
+        _     <- store.commit(store.updateUser(updatedUser))
+        found <- store.commit(store.findUserById(user.id))
       } yield assertEquals(found, Some(updatedUser))
     }
   }
@@ -90,10 +90,10 @@ class PostgresUserStoreSpec extends DatabaseSpec {
       )
 
       for {
-        _           <- store.create(user).commit
-        foundBefore <- store.findById(user.id).commit
-        _           <- store.delete(user.id).commit
-        foundAfter  <- store.findById(user.id).commit
+        _           <- store.commit(store.createUser(user))
+        foundBefore <- store.commit(store.findUserById(user.id))
+        _           <- store.commit(store.deleteUser(user.id))
+        foundAfter  <- store.commit(store.findUserById(user.id))
       } yield {
         assertEquals(foundBefore, Some(user))
         assertEquals(foundAfter, None)

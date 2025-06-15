@@ -29,7 +29,7 @@ class PostgresOrderStoreSpec extends DatabaseSpec {
       )
 
       for {
-        _     <- userStore.commit(userStore.create(user))
+        _     <- userStore.commit(userStore.createUser(user))
         _     <- orderStore.commit(orderStore.create(order))
         found <- orderStore.commit(orderStore.findById(order.id))
       } yield assertEquals(found, Some(order))
@@ -64,7 +64,7 @@ class PostgresOrderStoreSpec extends DatabaseSpec {
       )
 
       for {
-        _      <- userStore.commit(userStore.create(user))
+        _      <- userStore.commit(userStore.createUser(user))
         _      <- orderStore.commit(orderStore.create(order1))
         _      <- orderStore.commit(orderStore.create(order2))
         orders <- orderStore.commit(orderStore.findByUserId(user.id))
@@ -98,7 +98,7 @@ class PostgresOrderStoreSpec extends DatabaseSpec {
 
       for {
         existsBefore <- orderStore.commit(orderStore.exists(order.id))
-        _            <- userStore.commit(userStore.create(user))
+        _            <- userStore.commit(userStore.createUser(user))
         _            <- orderStore.commit(orderStore.create(order))
         existsAfter  <- orderStore.commit(orderStore.exists(order.id))
       } yield {
@@ -133,7 +133,7 @@ class PostgresOrderStoreSpec extends DatabaseSpec {
       )
 
       for {
-        _     <- userStore.commit(userStore.create(user))
+        _     <- userStore.commit(userStore.createUser(user))
         _     <- orderStore.commit(orderStore.create(order))
         _     <- orderStore.commit(orderStore.update(updatedOrder))
         found <- orderStore.commit(orderStore.findById(order.id))
@@ -160,7 +160,7 @@ class PostgresOrderStoreSpec extends DatabaseSpec {
       )
 
       for {
-        _           <- userStore.commit(userStore.create(user))
+        _           <- userStore.commit(userStore.createUser(user))
         _           <- orderStore.commit(orderStore.create(order))
         foundBefore <- orderStore.commit(orderStore.findById(order.id))
         _           <- orderStore.commit(orderStore.delete(order.id))
@@ -182,7 +182,7 @@ class PostgresOrderStoreSpec extends DatabaseSpec {
       )
 
       for {
-        _      <- userStore.commit(userStore.create(user))
+        _      <- userStore.commit(userStore.createUser(user))
         orders <- orderStore.commit(orderStore.findByUserId(user.id))
       } yield assertEquals(orders, List.empty)
     }
