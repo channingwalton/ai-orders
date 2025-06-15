@@ -22,6 +22,10 @@ object ServiceError {
     def message: String = s"Failed to encode response to JSON: $reason"
   }
 
+  case class DatabaseError(reason: String) extends ServiceError {
+    def message: String = s"Database error: $reason"
+  }
+
   implicit val encoder: Encoder[ServiceError] = Encoder.instance {
     case UserNotFound(userId) =>
       deriveEncoder[UserNotFound].apply(UserNotFound(userId))
@@ -29,10 +33,13 @@ object ServiceError {
       deriveEncoder[InvalidJsonRequest].apply(InvalidJsonRequest(reason))
     case JsonEncodingFailure(reason) =>
       deriveEncoder[JsonEncodingFailure].apply(JsonEncodingFailure(reason))
+    case DatabaseError(reason) =>
+      deriveEncoder[DatabaseError].apply(DatabaseError(reason))
   }
 
   implicit val decoder: Decoder[ServiceError] =
     deriveDecoder[UserNotFound].widen[ServiceError] or
       deriveDecoder[InvalidJsonRequest].widen[ServiceError] or
-      deriveDecoder[JsonEncodingFailure].widen[ServiceError]
+      deriveDecoder[JsonEncodingFailure].widen[ServiceError] or
+      deriveDecoder[DatabaseError].widen[ServiceError]
 }

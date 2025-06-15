@@ -19,7 +19,8 @@ A RESTful order management system built with Scala 3, HTTP4s, and PostgreSQL.
 
 - **Java 21** or higher
 - **SBT 1.11.2**
-- **PostgreSQL 16** (for full functionality)
+- **PostgreSQL 16** - Required for user store functionality
+- **Docker** - Required for running database tests with TestContainers
 
 ## 🏃 Quick Start
 
@@ -29,12 +30,23 @@ A RESTful order management system built with Scala 3, HTTP4s, and PostgreSQL.
    cd ai-orders
    ```
 
-2. **Run the application**
+2. **Set up PostgreSQL database**
+   ```bash
+   # Create database and user
+   createdb aiorders
+   createuser aiorders
+   psql -d aiorders -c "ALTER USER aiorders WITH PASSWORD 'password';"
+   psql -d aiorders -c "GRANT ALL PRIVILEGES ON DATABASE aiorders TO aiorders;"
+   ```
+
+3. **Run the application**
    ```bash
    sbt run
    ```
+   
+   The application will automatically run Flyway migrations on startup.
 
-3. **Access the health endpoint**
+4. **Access the health endpoint**
    ```bash
    curl http://localhost:8080/health
    ```
@@ -123,7 +135,7 @@ Retrieves all orders for a specific user, sorted by creation time (newest first)
 ### Running Tests
 
 ```bash
-# Run all tests
+# Run all tests (includes database integration tests)
 sbt test
 
 # Run specific test suite
@@ -134,7 +146,12 @@ sbt "testOnly com.example.aiorders.routes.OrderRoutesSpec"
 sbt "testOnly com.example.aiorders.routes.OrderRoutesErrorSpec"
 sbt "testOnly com.example.aiorders.services.OrderServiceSpec"
 sbt "testOnly com.example.aiorders.services.UserServiceSpec"
+
+# Run database store tests (requires Docker)
+sbt "testOnly com.example.aiorders.store.PostgresUserStoreSpec"
 ```
+
+**Note**: Database tests use TestContainers and require Docker to be running.
 
 ### Code Quality
 
@@ -165,15 +182,18 @@ ai-orders/
 │   ├── main/
 │   │   ├── scala/com/example/aiorders/
 │   │   │   ├── config/          # Configuration models
+│   │   │   ├── db/              # Database migrations
 │   │   │   ├── models/          # Domain models
 │   │   │   ├── routes/          # HTTP routes
 │   │   │   ├── services/        # Business logic
+│   │   │   ├── store/           # Data persistence layer
 │   │   │   ├── AiOrdersApp.scala # Main application
 │   │   │   └── Main.scala       # Entry point
 │   │   └── resources/
-│   │       └── application.conf # Application configuration
+│   │       ├── application.conf # Application configuration
+│   │       └── db/migration/    # Flyway SQL migrations
 │   └── test/
-│       └── scala/               # Test suites
+│       └── scala/               # Test suites including DatabaseSpec
 ├── features/                    # Feature documentation
 ├── examples/                    # Reference implementations
 ├── reference/                   # Library references
@@ -183,9 +203,11 @@ ai-orders/
 ### Architecture Layers
 
 - **Routes**: Handle HTTP requests/responses, delegate to services
-- **Services**: Business logic, defined as traits with implementations
+- **Services**: Business logic, defined as traits with implementations  
+- **Store**: Data persistence layer with PostgreSQL implementation using Doobie
 - **Models**: Domain objects with JSON codecs (Order, User, ServiceError)
 - **Config**: Configuration management with PureConfig
+- **DB**: Database migrations and setup using Flyway
 
 ### Domain Models
 
@@ -193,6 +215,34 @@ ai-orders/
 - **User**: User entity for validation and management
 - **ServiceError**: Sealed trait for structured error handling
 - **OrderId, UserId, ProductId**: Strongly-typed identifiers
+
+### Data Persistence
+
+The application uses a layered approach to data persistence:
+
+- **UserStore**: Generic trait `UserStore[F[_], G[_]]` for user CRUD operations
+- **PostgresUserStore**: PostgreSQL implementation using Doobie
+- **Transaction Support**: Operations can be composed within database transactions
+- **Migration Management**: Flyway handles schema versioning and updates
+- **Test Infrastructure**: `DatabaseSpec` provides TestContainer-based database testing
+
+**User Store Operations:**
+- `create(user: User): G[Unit]` - Create new user
+- `findById(userId: UserId): G[Option[User]]` - Find user by ID
+- `findByEmail(email: String): G[Option[User]]` - Find user by email
+- `update(user: User): G[Unit]` - Update existing user
+- `delete(userId: UserId): G[Unit]` - Delete user
+- `exists(userId: UserId): G[Boolean]` - Check if user exists
+
+**Database Schema:**
+```sql
+CREATE TABLE users (
+    id UUID PRIMARY KEY,
+    email VARCHAR(255) NOT NULL UNIQUE,
+    name VARCHAR(255) NOT NULL,
+    created_at TIMESTAMP WITH TIME ZONE NOT NULL
+);
+```
 
 ## ⚙️ Configuration
 
@@ -208,7 +258,19 @@ application {
   name = "ai-orders"
   version = "0.1.0-SNAPSHOT"
 }
+
+database {
+  url = "jdbc:postgresql://localhost:5432/aiorders"
+  username = "aiorders"
+  password = "password"
+  driver = "org.postgresql.Driver"
+}
 ```
+
+Environment variables can override configuration values:
+- `DATABASE_URL`
+- `DATABASE_USERNAME` 
+- `DATABASE_PASSWORD`
 
 ## 🚀 Deployment
 
@@ -218,6 +280,8 @@ The application is designed to be containerized and deployed in cloud environmen
 - Uses structured logging for observability
 - Implements graceful shutdown
 - Follows 12-factor app principles
+- Automatic database migrations on startup via Flyway
+- PostgreSQL connection pooling with HikariCP
 
 ## 🤝 Contributing
 

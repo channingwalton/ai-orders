@@ -14,9 +14,17 @@ final case class ApplicationConfig(
   version: String
 )
 
+final case class DatabaseConfig(
+  url: String,
+  username: String,
+  password: String,
+  driver: String = "org.postgresql.Driver"
+)
+
 final case class AppConfig(
   server: ServerConfig,
-  application: ApplicationConfig
+  application: ApplicationConfig,
+  database: DatabaseConfig
 ) derives ConfigReader
 
 object AppConfig {
