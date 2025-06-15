@@ -1,8 +1,8 @@
-# Unify Stores
+# Fix Store Initialisation
 
 ## Status
 
-- ⚪ **Pending**
+- 🟢 **Complete**
 
 ## Objective
 
@@ -10,5 +10,5 @@
 
 ## Acceptance Criteria
 
-- [ ] Follow all instructions in CLAUDE.md
-- [ ] All tests pass and code is properly formatted
+- [x] Follow all instructions in CLAUDE.md
+- [x] All tests pass and code is properly formatted

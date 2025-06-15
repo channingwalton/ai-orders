@@ -33,15 +33,12 @@ object AiOrdersApp {
         _ <-
           if (runMigrations) Resource.eval(DatabaseMigration.migrate[IO](config))
           else Resource.pure(())
-        ce <- doobie.util.ExecutionContexts.fixedThreadPool[IO](32)
-        transactor <- doobie.hikari.HikariTransactor.newHikariTransactor[IO](
-          config.database.driver,
+        store <- PostgresOrderStore.resource[IO](
           config.database.url,
           config.database.username,
           config.database.password,
-          ce
+          lift
         )
-        store        = new PostgresOrderStore[IO](transactor, lift)
         userService  = UserService.withStore(store)
         orderService = OrderService.withStore(store, userService)
         orderRoutes  = OrderRoutes[IO](orderService)
