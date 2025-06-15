@@ -16,8 +16,8 @@ Each prompt should include:
 - Refer to the examples in the example directory for code style
 - Ensure the feature document has a status and checklist of acceptance criteria
 - run `sbt commitCheck` to ensure all tests pass and code is formatted
-- When commitCheck passes, commit and push code except except the reference and examples directories
 - Update the project README
+- When commitCheck passes, commit and push code except except the reference and examples directories
 
 ## Status Indicators
 
