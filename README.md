@@ -1,6 +1,11 @@
 # AI Orders
 
-A RESTful order management system built with Scala 3, HTTP4s, and PostgreSQL.
+A RESTful order management system built with Scala 3, HTTP4s, and PostgreSQL by Claude Code.
+
+The project was started with CLAUDE.md, and features/01-initial-setup.md.
+It was also given the an examples directory of projects to use for inspiration, 
+and a reference directory that contained the git repos for circe, flyway,
+http4s, munit, pureconfig, and the bloop-tutorial.
 
 ## 🚀 Technology Stack
 
