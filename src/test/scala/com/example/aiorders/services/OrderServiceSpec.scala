@@ -1,7 +1,7 @@
 package com.example.aiorders.services
 
 import cats.effect.IO
-import com.example.aiorders.models.{CreateOrderRequest, OrderId, ProductId, UserId}
+import com.example.aiorders.models.{CreateOrderRequest, OrderId, ProductId, ServiceError, UserId}
 import munit.CatsEffectSuite
 
 import java.util.UUID
@@ -17,10 +17,18 @@ class OrderServiceSpec extends CatsEffectSuite {
     totalAmount = BigDecimal("29.99")
   )
 
-  test("createOrder creates a new order with correct details") {
-    OrderService.inMemory[IO].flatMap { service =>
-      service.createOrder(testRequest).map { order =>
-        assertEquals(order.userId, testUserId)
+  private def setupServices: IO[(UserService[IO], OrderService[IO], UserId)] =
+    for {
+      userService  <- UserService.inMemory[IO]
+      orderService <- OrderService.inMemory[IO](userService)
+      user         <- userService.createUser("test@example.com", "Test User")
+    } yield (userService, orderService, user.id)
+
+  test("createOrder creates a new order with correct details for existing user") {
+    setupServices.flatMap { case (_, orderService, validUserId) =>
+      val request = testRequest.copy(userId = validUserId)
+      orderService.createOrder(request).map { order =>
+        assertEquals(order.userId, validUserId)
         assertEquals(order.productId, testProductId)
         assertEquals(order.quantity, 2)
         assertEquals(order.totalAmount, BigDecimal("29.99"))
@@ -30,46 +38,69 @@ class OrderServiceSpec extends CatsEffectSuite {
     }
   }
 
-  test("getOrdersForUser returns empty list when no orders exist") {
-    OrderService.inMemory[IO].flatMap { service =>
-      service.getOrdersForUser(testUserId).map { orders =>
+  test("createOrder fails for non-existent user") {
+    setupServices.flatMap { case (_, orderService, _) =>
+      orderService.createOrder(testRequest).attempt.map {
+        case Left(ServiceError.UserNotFound(userId)) => assertEquals(userId, testUserId)
+        case Left(other) => fail(s"Expected UserNotFound error, got: $other")
+        case Right(_)    => fail("Expected error for non-existent user")
+      }
+    }
+  }
+
+  test("getOrdersForUser returns empty list when no orders exist for existing user") {
+    setupServices.flatMap { case (_, orderService, validUserId) =>
+      orderService.getOrdersForUser(validUserId).map { orders =>
         assertEquals(orders, List.empty)
       }
     }
   }
 
+  test("getOrdersForUser fails for non-existent user") {
+    setupServices.flatMap { case (_, orderService, _) =>
+      orderService.getOrdersForUser(testUserId).attempt.map {
+        case Left(ServiceError.UserNotFound(userId)) => assertEquals(userId, testUserId)
+        case Left(other) => fail(s"Expected UserNotFound error, got: $other")
+        case Right(_)    => fail("Expected error for non-existent user")
+      }
+    }
+  }
+
   test("getOrdersForUser returns orders for specific user") {
-    OrderService.inMemory[IO].flatMap { service =>
-      val otherUserId  = UserId(UUID.randomUUID())
-      val otherRequest = testRequest.copy(userId = otherUserId)
-
+    setupServices.flatMap { case (userService, orderService, user1Id) =>
       for {
-        order1 <- service.createOrder(testRequest)
-        order2 <- service.createOrder(otherRequest)
-        order3 <- service.createOrder(testRequest)
+        user2 <- userService.createUser("user2@example.com", "User 2")
 
-        userOrders      <- service.getOrdersForUser(testUserId)
-        otherUserOrders <- service.getOrdersForUser(otherUserId)
+        request1 = testRequest.copy(userId = user1Id)
+        request2 = testRequest.copy(userId = user2.id)
+
+        order1 <- orderService.createOrder(request1)
+        order2 <- orderService.createOrder(request2)
+        order3 <- orderService.createOrder(request1)
+
+        user1Orders <- orderService.getOrdersForUser(user1Id)
+        user2Orders <- orderService.getOrdersForUser(user2.id)
       } yield {
-        assertEquals(userOrders.length, 2)
-        assertEquals(otherUserOrders.length, 1)
-        assert(userOrders.contains(order1))
-        assert(userOrders.contains(order3))
-        assert(otherUserOrders.contains(order2))
+        assertEquals(user1Orders.length, 2)
+        assertEquals(user2Orders.length, 1)
+        assert(user1Orders.contains(order1))
+        assert(user1Orders.contains(order3))
+        assert(user2Orders.contains(order2))
       }
     }
   }
 
   test("getOrdersForUser returns orders sorted by creation time (newest first)") {
-    OrderService.inMemory[IO].flatMap { service =>
+    setupServices.flatMap { case (_, orderService, validUserId) =>
+      val request = testRequest.copy(userId = validUserId)
       for {
-        order1 <- service.createOrder(testRequest)
+        order1 <- orderService.createOrder(request)
         _      <- IO.sleep(scala.concurrent.duration.Duration.fromNanos(1000))
-        order2 <- service.createOrder(testRequest)
+        order2 <- orderService.createOrder(request)
         _      <- IO.sleep(scala.concurrent.duration.Duration.fromNanos(1000))
-        order3 <- service.createOrder(testRequest)
+        order3 <- orderService.createOrder(request)
 
-        orders <- service.getOrdersForUser(testUserId)
+        orders <- orderService.getOrdersForUser(validUserId)
       } yield {
         assertEquals(orders.length, 3)
         assertEquals(orders.head, order3)

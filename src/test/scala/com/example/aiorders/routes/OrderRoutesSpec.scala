@@ -2,7 +2,7 @@ package com.example.aiorders.routes
 
 import cats.effect.IO
 import com.example.aiorders.models.{CreateOrderRequest, OrderListResponse, ProductId, UserId}
-import com.example.aiorders.services.OrderService
+import com.example.aiorders.services.{OrderService, UserService}
 import io.circe.syntax._
 import munit.CatsEffectSuite
 import org.http4s._
@@ -28,66 +28,75 @@ class OrderRoutesSpec extends CatsEffectSuite {
   )
 
   test("POST /orders creates a new order") {
-    OrderService.inMemory[IO].flatMap { service =>
-      val routes = OrderRoutes[IO](service).routes
-      val request = Request[IO](Method.POST, uri"/orders")
-        .withEntity(testRequest.asJson)
+    for {
+      userService  <- UserService.inMemory[IO]
+      user         <- userService.createUser("test@example.com", "Test User")
+      orderService <- OrderService.inMemory[IO](userService)
 
-      routes.orNotFound(request).flatMap { response =>
-        assertEquals(response.status, Status.Created)
-        response.as[com.example.aiorders.models.Order].map { order =>
-          assertEquals(order.userId, testUserId)
-          assertEquals(order.productId, testProductId)
-          assertEquals(order.quantity, 2)
-          assertEquals(order.totalAmount, BigDecimal("29.99"))
-        }
-      }
+      routes       = OrderRoutes[IO](orderService).routes
+      validRequest = testRequest.copy(userId = user.id)
+      request = Request[IO](Method.POST, uri"/orders")
+        .withEntity(validRequest.asJson)
+
+      response <- routes.orNotFound(request)
+      _ = assertEquals(response.status, Status.Created)
+      order <- response.as[com.example.aiorders.models.Order]
+    } yield {
+      assertEquals(order.userId, user.id)
+      assertEquals(order.productId, testProductId)
+      assertEquals(order.quantity, 2)
+      assertEquals(order.totalAmount, BigDecimal("29.99"))
     }
   }
 
   test("GET /orders/user/{userId} returns empty list when no orders exist") {
-    OrderService.inMemory[IO].flatMap { service =>
-      val routes = OrderRoutes[IO](service).routes
-      val request =
-        Request[IO](Method.GET, Uri.unsafeFromString(s"/orders/user/${testUserId.value}"))
+    for {
+      userService  <- UserService.inMemory[IO]
+      user         <- userService.createUser("test@example.com", "Test User")
+      orderService <- OrderService.inMemory[IO](userService)
 
-      routes.orNotFound(request).flatMap { response =>
-        assertEquals(response.status, Status.Ok)
-        response.as[OrderListResponse].map { orderList =>
-          assertEquals(orderList.orders, List.empty)
-        }
-      }
-    }
+      routes  = OrderRoutes[IO](orderService).routes
+      request = Request[IO](Method.GET, Uri.unsafeFromString(s"/orders/user/${user.id.value}"))
+
+      response <- routes.orNotFound(request)
+      _ = assertEquals(response.status, Status.Ok)
+      orderList <- response.as[OrderListResponse]
+    } yield assertEquals(orderList.orders, List.empty)
   }
 
   test("GET /orders/user/{userId} returns orders for user") {
-    OrderService.inMemory[IO].flatMap { service =>
-      val routes = OrderRoutes[IO](service).routes
+    for {
+      userService  <- UserService.inMemory[IO]
+      user         <- userService.createUser("test@example.com", "Test User")
+      orderService <- OrderService.inMemory[IO](userService)
 
-      for {
-        _ <- service.createOrder(testRequest)
-        _ <- service.createOrder(testRequest.copy(quantity = 3))
+      routes        = OrderRoutes[IO](orderService).routes
+      validRequest1 = testRequest.copy(userId = user.id)
+      validRequest2 = testRequest.copy(userId = user.id, quantity = 3)
 
-        request = Request[IO](Method.GET, Uri.unsafeFromString(s"/orders/user/${testUserId.value}"))
-        response <- routes.orNotFound(request)
+      _ <- orderService.createOrder(validRequest1)
+      _ <- orderService.createOrder(validRequest2)
 
-        _ = assertEquals(response.status, Status.Ok)
-        orderList <- response.as[OrderListResponse]
-      } yield {
-        assertEquals(orderList.orders.length, 2)
-        assert(orderList.orders.forall(_.userId == testUserId))
-      }
+      request = Request[IO](Method.GET, Uri.unsafeFromString(s"/orders/user/${user.id.value}"))
+      response <- routes.orNotFound(request)
+
+      _ = assertEquals(response.status, Status.Ok)
+      orderList <- response.as[OrderListResponse]
+    } yield {
+      assertEquals(orderList.orders.length, 2)
+      assert(orderList.orders.forall(_.userId == user.id))
     }
   }
 
-  test("GET /orders/user/{userId} with invalid UUID returns 400") {
-    OrderService.inMemory[IO].flatMap { service =>
-      val routes  = OrderRoutes[IO](service).routes
-      val request = Request[IO](Method.GET, uri"/orders/user/invalid-uuid")
+  test("GET /orders/user/{userId} with invalid UUID returns 404") {
+    for {
+      userService  <- UserService.inMemory[IO]
+      orderService <- OrderService.inMemory[IO](userService)
 
-      routes.orNotFound(request).map { response =>
-        assertEquals(response.status, Status.NotFound)
-      }
-    }
+      routes  = OrderRoutes[IO](orderService).routes
+      request = Request[IO](Method.GET, uri"/orders/user/invalid-uuid")
+
+      response <- routes.orNotFound(request)
+    } yield assertEquals(response.status, Status.NotFound)
   }
 }

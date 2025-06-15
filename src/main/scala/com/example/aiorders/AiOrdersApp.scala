@@ -5,7 +5,7 @@ import cats.syntax.all._
 import com.example.aiorders.config.AppConfig
 import com.example.aiorders.models.ApplicationInfo
 import com.example.aiorders.routes.{HealthRoutes, OrderRoutes}
-import com.example.aiorders.services.{HealthService, OrderService}
+import com.example.aiorders.services.{HealthService, OrderService, UserService}
 import org.http4s.HttpApp
 import org.http4s.ember.server.EmberServerBuilder
 import org.http4s.server.Server
@@ -23,7 +23,8 @@ object AiOrdersApp {
     val healthRoutes  = HealthRoutes[IO](healthService)
 
     for {
-      orderService <- Resource.eval(OrderService.inMemory[IO])
+      userService  <- Resource.eval(UserService.inMemory[IO])
+      orderService <- Resource.eval(OrderService.inMemory[IO](userService))
       orderRoutes = OrderRoutes[IO](orderService)
 
       allRoutes            = healthRoutes <+> orderRoutes.routes
