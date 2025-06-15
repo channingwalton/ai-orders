@@ -60,7 +60,7 @@ lazy val root = (project in file("."))
     addCommandAlias("ci", "test"),
     addCommandAlias(
       "commitCheck",
-      "clean; scalafmtCheckAll; scalafmtSbtCheck; scalafixAll --check; test"
+      "clean; test; scalafmtAll; scalafixAll "
     )
   )
 

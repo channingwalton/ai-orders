@@ -1,6 +1,7 @@
 package com.example.aiorders.services
 
 import cats.effect.IO
+import com.example.aiorders.TestHelpers
 import com.example.aiorders.models.{CreateOrderRequest, OrderId, ProductId, ServiceError, UserId}
 import munit.CatsEffectSuite
 
@@ -19,7 +20,7 @@ class OrderServiceSpec extends CatsEffectSuite {
 
   private def setupServices: IO[(UserService[IO], OrderService[IO], UserId)] =
     for {
-      userService  <- UserService.inMemory[IO]
+      userService  <- TestHelpers.createInMemoryUserService
       orderService <- OrderService.inMemory[IO](userService)
       user         <- userService.createUser("test@example.com", "Test User")
     } yield (userService, orderService, user.id)

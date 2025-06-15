@@ -7,6 +7,7 @@ import com.example.aiorders.db.DatabaseMigration
 import com.example.aiorders.models.ApplicationInfo
 import com.example.aiorders.routes.{HealthRoutes, OrderRoutes}
 import com.example.aiorders.services.{HealthService, OrderService, UserService}
+import com.example.aiorders.store.PostgresUserStore
 import org.http4s.HttpApp
 import org.http4s.ember.server.EmberServerBuilder
 import org.http4s.server.Server
@@ -27,30 +28,38 @@ object AiOrdersApp {
     val healthService = HealthService[IO](appInfo)
     val healthRoutes  = HealthRoutes[IO](healthService)
 
-    for {
-      _ <-
-        if (runMigrations) Resource.eval(DatabaseMigration.migrate[IO](config))
-        else Resource.pure(())
-      userService  <- Resource.eval(UserService.inMemory[IO])
-      orderService <- Resource.eval(OrderService.inMemory[IO](userService))
-      orderRoutes = OrderRoutes[IO](orderService)
+    doobie.WeakAsync.liftK[IO, doobie.ConnectionIO].flatMap { lift =>
+      for {
+        _ <-
+          if (runMigrations) Resource.eval(DatabaseMigration.migrate[IO](config))
+          else Resource.pure(())
+        userStore <- PostgresUserStore.resource[IO](
+          config.database.url,
+          config.database.username,
+          config.database.password,
+          lift
+        )
+        userService = UserService.withStore(userStore)
+        orderService <- Resource.eval(OrderService.inMemory[IO](userService))
+        orderRoutes = OrderRoutes[IO](orderService)
 
-      allRoutes            = healthRoutes <+> orderRoutes.routes
-      httpApp: HttpApp[IO] = allRoutes.orNotFound
+        allRoutes            = healthRoutes <+> orderRoutes.routes
+        httpApp: HttpApp[IO] = allRoutes.orNotFound
 
-      _ <- Resource.eval(
-        logger.info(s"Starting server on ${config.server.host}:${config.server.port}")
-      )
-      server <- EmberServerBuilder
-        .default[IO]
-        .withHost(config.server.host)
-        .withPort(config.server.port)
-        .withHttpApp(httpApp)
-        .build
-      _ <- Resource.eval(
-        logger.info(s"Server started successfully on ${config.server.host}:${config.server.port}")
-      )
-    } yield server
+        _ <- Resource.eval(
+          logger.info(s"Starting server on ${config.server.host}:${config.server.port}")
+        )
+        server <- EmberServerBuilder
+          .default[IO]
+          .withHost(config.server.host)
+          .withPort(config.server.port)
+          .withHttpApp(httpApp)
+          .build
+        _ <- Resource.eval(
+          logger.info(s"Server started successfully on ${config.server.host}:${config.server.port}")
+        )
+      } yield server
+    }
   }
 
   def loadConfig: IO[AppConfig] =

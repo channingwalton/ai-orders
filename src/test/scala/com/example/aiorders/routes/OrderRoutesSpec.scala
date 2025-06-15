@@ -1,8 +1,9 @@
 package com.example.aiorders.routes
 
 import cats.effect.IO
+import com.example.aiorders.TestHelpers
 import com.example.aiorders.models.{CreateOrderRequest, OrderListResponse, ProductId, UserId}
-import com.example.aiorders.services.{OrderService, UserService}
+import com.example.aiorders.services.OrderService
 import io.circe.syntax._
 import munit.CatsEffectSuite
 import org.http4s._
@@ -29,7 +30,7 @@ class OrderRoutesSpec extends CatsEffectSuite {
 
   test("POST /orders creates a new order") {
     for {
-      userService  <- UserService.inMemory[IO]
+      userService  <- TestHelpers.createInMemoryUserService
       user         <- userService.createUser("test@example.com", "Test User")
       orderService <- OrderService.inMemory[IO](userService)
 
@@ -51,7 +52,7 @@ class OrderRoutesSpec extends CatsEffectSuite {
 
   test("GET /orders/user/{userId} returns empty list when no orders exist") {
     for {
-      userService  <- UserService.inMemory[IO]
+      userService  <- TestHelpers.createInMemoryUserService
       user         <- userService.createUser("test@example.com", "Test User")
       orderService <- OrderService.inMemory[IO](userService)
 
@@ -66,7 +67,7 @@ class OrderRoutesSpec extends CatsEffectSuite {
 
   test("GET /orders/user/{userId} returns orders for user") {
     for {
-      userService  <- UserService.inMemory[IO]
+      userService  <- TestHelpers.createInMemoryUserService
       user         <- userService.createUser("test@example.com", "Test User")
       orderService <- OrderService.inMemory[IO](userService)
 
@@ -90,7 +91,7 @@ class OrderRoutesSpec extends CatsEffectSuite {
 
   test("GET /orders/user/{userId} with invalid UUID returns 404") {
     for {
-      userService  <- UserService.inMemory[IO]
+      userService  <- TestHelpers.createInMemoryUserService
       orderService <- OrderService.inMemory[IO](userService)
 
       routes  = OrderRoutes[IO](orderService).routes

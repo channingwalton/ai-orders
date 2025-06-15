@@ -1,8 +1,9 @@
 package com.example.aiorders.services
 
-import cats.effect.Ref
+import cats.effect.MonadCancelThrow
 import cats.syntax.all._
 import com.example.aiorders.models.{User, UserId}
+import com.example.aiorders.store.UserStore
 
 import java.time.Instant
 import java.util.UUID
@@ -13,12 +14,12 @@ trait UserService[F[_]] {
   def getUser(userId: UserId): F[Option[User]]
 }
 
-class InMemoryUserService[F[_]](storage: Ref[F, Map[UserId, User]])(implicit
-  F: cats.effect.Sync[F]
+class DatabaseUserService[F[_], G[_]](store: UserStore[F, G])(implicit
+  F: MonadCancelThrow[F]
 ) extends UserService[F] {
 
   def userExists(userId: UserId): F[Boolean] =
-    storage.get.map(_.contains(userId))
+    store.commit(store.exists(userId))
 
   def createUser(email: String, name: String): F[User] = {
     val user = User(
@@ -28,14 +29,14 @@ class InMemoryUserService[F[_]](storage: Ref[F, Map[UserId, User]])(implicit
       createdAt = Instant.now()
     )
 
-    storage.update(_.updated(user.id, user)) *> F.pure(user)
+    store.commit(store.create(user)) *> F.pure(user)
   }
 
   def getUser(userId: UserId): F[Option[User]] =
-    storage.get.map(_.get(userId))
+    store.commit(store.findById(userId))
 }
 
 object UserService {
-  def inMemory[F[_]: cats.effect.Sync]: F[UserService[F]] =
-    Ref.of[F, Map[UserId, User]](Map.empty).map(new InMemoryUserService[F](_))
+  def withStore[F[_]: MonadCancelThrow, G[_]](store: UserStore[F, G]): UserService[F] =
+    new DatabaseUserService[F, G](store)
 }

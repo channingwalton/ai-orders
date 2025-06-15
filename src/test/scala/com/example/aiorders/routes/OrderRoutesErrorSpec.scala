@@ -1,6 +1,7 @@
 package com.example.aiorders.routes
 
 import cats.effect.IO
+import com.example.aiorders.TestHelpers
 import com.example.aiorders.models.{CreateOrderRequest, ProductId, UserId}
 import com.example.aiorders.services.{OrderService, UserService}
 import io.circe.Json
@@ -27,7 +28,7 @@ class OrderRoutesErrorSpec extends CatsEffectSuite {
 
   private def setupServices: IO[(UserService[IO], OrderService[IO], UserId)] =
     for {
-      userService  <- UserService.inMemory[IO]
+      userService  <- TestHelpers.createInMemoryUserService
       orderService <- OrderService.inMemory[IO](userService)
       user         <- userService.createUser("test@example.com", "Test User")
     } yield (userService, orderService, user.id)
