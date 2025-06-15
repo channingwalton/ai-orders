@@ -5,7 +5,9 @@
       "Bash(git commit:*)",
       "Bash(git push:*)",
       "WebFetch(domain:docs.anthropic.com)",
-      "Bash(timeout 10s sbt run)"
+      "Bash(timeout 10s sbt run)",
+      "Bash(bloop compile:*)",
+      "Bash(bloop test:*)"
     ],
     "deny": []
   }
