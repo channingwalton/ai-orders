@@ -4,9 +4,9 @@ import cats.effect.IO
 import cats.{Id, ~>}
 import com.example.aiorders.models.{User, UserId}
 import com.example.aiorders.store.UserStore
+import com.example.aiorders.utils.TimeUtils
 import munit.CatsEffectSuite
 
-import java.time.Instant
 import java.util.UUID
 
 class UserServiceSpec extends CatsEffectSuite {
@@ -16,7 +16,7 @@ class UserServiceSpec extends CatsEffectSuite {
     id = testUserId,
     email = "test@example.com",
     name = "Test User",
-    createdAt = Instant.now()
+    createdAt = TimeUtils.nowWithSecondPrecision
   )
 
   private def mockUserStore(users: Map[UserId, User] = Map.empty): UserStore[IO, Id] =

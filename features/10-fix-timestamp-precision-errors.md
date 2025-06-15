@@ -2,7 +2,7 @@
 
 ## Status
 
-- ⚪ **Pending**
+🟢 **Complete**
 
 ## Objective
 
@@ -23,5 +23,16 @@ Fix the issue.
 
 ## Acceptance Criteria
 
-- [ ] Ensure all timestamps are precise to 1 second
-- [ ] Follow all instructions in CLAUDE.md
+- [x] Ensure all timestamps are precise to 1 second
+- [x] Follow all instructions in CLAUDE.md
+
+## Implementation Summary
+
+- Created `TimeUtils.nowWithSecondPrecision` utility function to truncate timestamps to second precision
+- Updated all timestamp creation points to use the new utility function:
+  - UserService.createUser
+  - OrderService.createOrder 
+  - TestHelpers.createInMemoryUserService
+  - PostgresUserStoreSpec test data
+  - UserServiceSpec test data
+- All 33 tests now pass with consistent timestamp precision

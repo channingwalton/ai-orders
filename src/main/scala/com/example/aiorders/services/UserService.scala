@@ -4,8 +4,8 @@ import cats.effect.MonadCancelThrow
 import cats.syntax.all._
 import com.example.aiorders.models.{User, UserId}
 import com.example.aiorders.store.UserStore
+import com.example.aiorders.utils.TimeUtils
 
-import java.time.Instant
 import java.util.UUID
 
 trait UserService[F[_]] {
@@ -26,7 +26,7 @@ class DatabaseUserService[F[_], G[_]](store: UserStore[F, G])(implicit
       id = UserId(UUID.randomUUID()),
       email = email,
       name = name,
-      createdAt = Instant.now()
+      createdAt = TimeUtils.nowWithSecondPrecision
     )
 
     store.commit(store.create(user)) *> F.pure(user)

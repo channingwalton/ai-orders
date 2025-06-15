@@ -3,8 +3,8 @@ package com.example.aiorders.services
 import cats.effect.Ref
 import cats.syntax.all._
 import com.example.aiorders.models.{CreateOrderRequest, Order, OrderId, ServiceError, UserId}
+import com.example.aiorders.utils.TimeUtils
 
-import java.time.Instant
 import java.util.UUID
 
 trait OrderService[F[_]] {
@@ -28,7 +28,7 @@ class InMemoryOrderService[F[_]](
         productId = request.productId,
         quantity = request.quantity,
         totalAmount = request.totalAmount,
-        createdAt = Instant.now()
+        createdAt = TimeUtils.nowWithSecondPrecision
       )
       _ <- storage.update(_.updated(order.id, order))
     } yield order

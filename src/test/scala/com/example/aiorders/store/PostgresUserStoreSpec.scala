@@ -3,8 +3,8 @@ package com.example.aiorders.store
 import cats.effect.IO
 import com.example.aiorders.DatabaseSpec
 import com.example.aiorders.models.{User, UserId}
+import com.example.aiorders.utils.TimeUtils
 
-import java.time.Instant
 import java.util.UUID
 
 class PostgresUserStoreSpec extends DatabaseSpec {
@@ -15,7 +15,7 @@ class PostgresUserStoreSpec extends DatabaseSpec {
         id = UserId(UUID.randomUUID()),
         email = "test@example.com",
         name = "Test User",
-        createdAt = Instant.now()
+        createdAt = TimeUtils.nowWithSecondPrecision
       )
 
       for {
@@ -31,7 +31,7 @@ class PostgresUserStoreSpec extends DatabaseSpec {
         id = UserId(UUID.randomUUID()),
         email = "email@example.com",
         name = "Email User",
-        createdAt = Instant.now()
+        createdAt = TimeUtils.nowWithSecondPrecision
       )
 
       for {
@@ -47,7 +47,7 @@ class PostgresUserStoreSpec extends DatabaseSpec {
         id = UserId(UUID.randomUUID()),
         email = "exists@example.com",
         name = "Exists User",
-        createdAt = Instant.now()
+        createdAt = TimeUtils.nowWithSecondPrecision
       )
 
       for {
@@ -67,7 +67,7 @@ class PostgresUserStoreSpec extends DatabaseSpec {
         id = UserId(UUID.randomUUID()),
         email = "update@example.com",
         name = "Update User",
-        createdAt = Instant.now()
+        createdAt = TimeUtils.nowWithSecondPrecision
       )
 
       val updatedUser = user.copy(name = "Updated Name", email = "updated@example.com")
@@ -86,7 +86,7 @@ class PostgresUserStoreSpec extends DatabaseSpec {
         id = UserId(UUID.randomUUID()),
         email = "delete@example.com",
         name = "Delete User",
-        createdAt = Instant.now()
+        createdAt = TimeUtils.nowWithSecondPrecision
       )
 
       for {

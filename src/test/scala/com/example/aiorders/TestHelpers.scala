@@ -3,8 +3,8 @@ package com.example.aiorders
 import cats.effect.{IO, Ref}
 import com.example.aiorders.models.{User, UserId}
 import com.example.aiorders.services.UserService
+import com.example.aiorders.utils.TimeUtils
 
-import java.time.Instant
 import java.util.UUID
 
 object TestHelpers {
@@ -21,7 +21,7 @@ object TestHelpers {
           id = UserId(UUID.randomUUID()),
           email = email,
           name = name,
-          createdAt = Instant.now()
+          createdAt = TimeUtils.nowWithSecondPrecision
         )
         ref.update(_.updated(user.id, user)) *> IO.pure(user)
       }
