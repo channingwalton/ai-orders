@@ -2,7 +2,7 @@
 
 ## Status
 
-- ⚪ **Pending**
+🟢 **Complete**
 
 ## Objective
 
@@ -10,4 +10,4 @@
 
 ## Acceptance Criteria
 
-- [ ] When running tests there should be no DEBUG level logs
+- [x] When running tests there should be no DEBUG level logs

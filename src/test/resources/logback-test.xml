@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<configuration>
+    <appender name="CONSOLE" class="ch.qos.logback.core.ConsoleAppender">
+        <encoder>
+            <pattern>%d{HH:mm:ss.SSS} [%thread] %-5level %logger{36} - %msg%n</pattern>
+        </encoder>
+    </appender>
+
+    <!-- Set default log level to WARN for tests to minimize output -->
+    <root level="WARN">
+        <appender-ref ref="CONSOLE" />
+    </root>
+
+    <!-- Application-specific logging at INFO level -->
+    <logger name="com.example.aiorders" level="INFO" />
+    
+    <!-- Suppress noisy third-party library logging during tests -->
+    <logger name="org.testcontainers" level="WARN" />
+    <logger name="com.github.dockerjava" level="WARN" />
+    <logger name="org.flywaydb" level="WARN" />
+    <logger name="doobie" level="WARN" />
+    <logger name="org.http4s" level="WARN" />
+    <logger name="cats.effect" level="WARN" />
+    <logger name="org.postgresql" level="WARN" />
+    <logger name="com.zaxxer.hikari" level="WARN" />
+    <logger name="io.netty" level="WARN" />
+    <logger name="org.eclipse.jetty" level="WARN" />
+</configuration>
