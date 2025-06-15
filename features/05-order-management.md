@@ -1,4 +1,4 @@
-# Order Management System
+# Order Management
 
 ## Status
 
