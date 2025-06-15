@@ -14,6 +14,10 @@ object ServiceError {
     def message: String = s"User with id ${userId.value} not found"
   }
 
+  case class OrderNotFound(orderId: OrderId) extends ServiceError {
+    def message: String = s"Order with id ${orderId.value} not found"
+  }
+
   case class InvalidJsonRequest(reason: String) extends ServiceError {
     def message: String = s"Invalid JSON request: $reason"
   }
@@ -29,6 +33,8 @@ object ServiceError {
   implicit val encoder: Encoder[ServiceError] = Encoder.instance {
     case UserNotFound(userId) =>
       deriveEncoder[UserNotFound].apply(UserNotFound(userId))
+    case OrderNotFound(orderId) =>
+      deriveEncoder[OrderNotFound].apply(OrderNotFound(orderId))
     case InvalidJsonRequest(reason) =>
       deriveEncoder[InvalidJsonRequest].apply(InvalidJsonRequest(reason))
     case JsonEncodingFailure(reason) =>
@@ -39,6 +45,7 @@ object ServiceError {
 
   implicit val decoder: Decoder[ServiceError] =
     deriveDecoder[UserNotFound].widen[ServiceError] or
+      deriveDecoder[OrderNotFound].widen[ServiceError] or
       deriveDecoder[InvalidJsonRequest].widen[ServiceError] or
       deriveDecoder[JsonEncodingFailure].widen[ServiceError] or
       deriveDecoder[DatabaseError].widen[ServiceError]

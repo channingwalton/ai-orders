@@ -1,8 +1,9 @@
 package com.example.aiorders.services
 
-import cats.effect.Ref
+import cats.effect.MonadCancelThrow
 import cats.syntax.all._
 import com.example.aiorders.models.{CreateOrderRequest, Order, OrderId, ServiceError, UserId}
+import com.example.aiorders.store.OrderStore
 import com.example.aiorders.utils.TimeUtils
 
 import java.util.UUID
@@ -12,10 +13,10 @@ trait OrderService[F[_]] {
   def getOrdersForUser(userId: UserId): F[List[Order]]
 }
 
-class InMemoryOrderService[F[_]](
-  storage: Ref[F, Map[OrderId, Order]],
+class DatabaseOrderService[F[_], G[_]](
+  store: OrderStore[F, G],
   userService: UserService[F]
-)(implicit F: cats.effect.Sync[F])
+)(implicit F: MonadCancelThrow[F])
     extends OrderService[F] {
 
   def createOrder(request: CreateOrderRequest): F[Order] =
@@ -30,20 +31,21 @@ class InMemoryOrderService[F[_]](
         totalAmount = request.totalAmount,
         createdAt = TimeUtils.nowWithSecondPrecision
       )
-      _ <- storage.update(_.updated(order.id, order))
+      _ <- store.commit(store.create(order))
     } yield order
 
   def getOrdersForUser(userId: UserId): F[List[Order]] =
     for {
       userExists <- userService.userExists(userId)
       _          <- if (userExists) F.unit else F.raiseError(ServiceError.UserNotFound(userId))
-      orders <- storage.get.map(
-        _.values.filter(_.userId == userId).toList.sortBy(_.createdAt.toEpochMilli).reverse
-      )
+      orders     <- store.commit(store.findByUserId(userId))
     } yield orders
 }
 
 object OrderService {
-  def inMemory[F[_]: cats.effect.Sync](userService: UserService[F]): F[OrderService[F]] =
-    Ref.of[F, Map[OrderId, Order]](Map.empty).map(new InMemoryOrderService[F](_, userService))
+  def withStore[F[_]: MonadCancelThrow, G[_]](
+    store: OrderStore[F, G],
+    userService: UserService[F]
+  ): OrderService[F] =
+    new DatabaseOrderService[F, G](store, userService)
 }

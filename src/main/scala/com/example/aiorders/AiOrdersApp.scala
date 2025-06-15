@@ -7,7 +7,7 @@ import com.example.aiorders.db.DatabaseMigration
 import com.example.aiorders.models.ApplicationInfo
 import com.example.aiorders.routes.{HealthRoutes, OrderRoutes}
 import com.example.aiorders.services.{HealthService, OrderService, UserService}
-import com.example.aiorders.store.PostgresUserStore
+import com.example.aiorders.store.{PostgresOrderStore, PostgresUserStore}
 import org.http4s.HttpApp
 import org.http4s.ember.server.EmberServerBuilder
 import org.http4s.server.Server
@@ -33,15 +33,19 @@ object AiOrdersApp {
         _ <-
           if (runMigrations) Resource.eval(DatabaseMigration.migrate[IO](config))
           else Resource.pure(())
-        userStore <- PostgresUserStore.resource[IO](
+        ce <- doobie.util.ExecutionContexts.fixedThreadPool[IO](32)
+        transactor <- doobie.hikari.HikariTransactor.newHikariTransactor[IO](
+          config.database.driver,
           config.database.url,
           config.database.username,
           config.database.password,
-          lift
+          ce
         )
-        userService = UserService.withStore(userStore)
-        orderService <- Resource.eval(OrderService.inMemory[IO](userService))
-        orderRoutes = OrderRoutes[IO](orderService)
+        userStore    = new PostgresUserStore[IO](transactor, lift)
+        orderStore   = new PostgresOrderStore[IO](transactor, lift)
+        userService  = UserService.withStore(userStore)
+        orderService = OrderService.withStore(orderStore, userService)
+        orderRoutes  = OrderRoutes[IO](orderService)
 
         allRoutes            = healthRoutes <+> orderRoutes.routes
         httpApp: HttpApp[IO] = allRoutes.orNotFound

@@ -3,7 +3,6 @@ package com.example.aiorders.routes
 import cats.effect.IO
 import com.example.aiorders.TestHelpers
 import com.example.aiorders.models.{CreateOrderRequest, OrderListResponse, ProductId, UserId}
-import com.example.aiorders.services.OrderService
 import io.circe.syntax._
 import munit.CatsEffectSuite
 import org.http4s._
@@ -32,7 +31,7 @@ class OrderRoutesSpec extends CatsEffectSuite {
     for {
       userService  <- TestHelpers.createInMemoryUserService
       user         <- userService.createUser("test@example.com", "Test User")
-      orderService <- OrderService.inMemory[IO](userService)
+      orderService <- TestHelpers.createInMemoryOrderService(userService)
 
       routes       = OrderRoutes[IO](orderService).routes
       validRequest = testRequest.copy(userId = user.id)
@@ -54,7 +53,7 @@ class OrderRoutesSpec extends CatsEffectSuite {
     for {
       userService  <- TestHelpers.createInMemoryUserService
       user         <- userService.createUser("test@example.com", "Test User")
-      orderService <- OrderService.inMemory[IO](userService)
+      orderService <- TestHelpers.createInMemoryOrderService(userService)
 
       routes  = OrderRoutes[IO](orderService).routes
       request = Request[IO](Method.GET, Uri.unsafeFromString(s"/orders/user/${user.id.value}"))
@@ -69,7 +68,7 @@ class OrderRoutesSpec extends CatsEffectSuite {
     for {
       userService  <- TestHelpers.createInMemoryUserService
       user         <- userService.createUser("test@example.com", "Test User")
-      orderService <- OrderService.inMemory[IO](userService)
+      orderService <- TestHelpers.createInMemoryOrderService(userService)
 
       routes        = OrderRoutes[IO](orderService).routes
       validRequest1 = testRequest.copy(userId = user.id)
@@ -92,7 +91,7 @@ class OrderRoutesSpec extends CatsEffectSuite {
   test("GET /orders/user/{userId} with invalid UUID returns 404") {
     for {
       userService  <- TestHelpers.createInMemoryUserService
-      orderService <- OrderService.inMemory[IO](userService)
+      orderService <- TestHelpers.createInMemoryOrderService(userService)
 
       routes  = OrderRoutes[IO](orderService).routes
       request = Request[IO](Method.GET, uri"/orders/user/invalid-uuid")

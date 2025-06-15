@@ -29,7 +29,7 @@ class OrderRoutesErrorSpec extends CatsEffectSuite {
   private def setupServices: IO[(UserService[IO], OrderService[IO], UserId)] =
     for {
       userService  <- TestHelpers.createInMemoryUserService
-      orderService <- OrderService.inMemory[IO](userService)
+      orderService <- TestHelpers.createInMemoryOrderService(userService)
       user         <- userService.createUser("test@example.com", "Test User")
     } yield (userService, orderService, user.id)
 
