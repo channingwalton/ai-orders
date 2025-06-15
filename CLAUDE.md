@@ -17,6 +17,7 @@ Each prompt should include:
 - Ensure the feature document has a status and checklist of acceptance criteria
 - run `sbt commitCheck` to ensure all tests pass and code is formatted
 - Update the project README
+- Use bloop to run tests and compile code, use sbt commitCheck for final checks
 - When commitCheck passes, commit and push code except except the reference and examples directories
 
 ## Status Indicators
