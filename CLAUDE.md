@@ -1,6 +1,4 @@
-# Project Prompts Index
-
-This directory contains all prompts and instructions for the Order Management System project.
+# Project Instructions
 
 ## Template Structure
 
